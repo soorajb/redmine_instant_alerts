@@ -1,0 +1,10 @@
+= Instant Alerts Plugin for Redmine
+
+This plugin provides growl like instant notifications (using pusherapp.com). Currently, will provide notifications of issue create/update only.
+Pending styling for grownl Notifications.
+
+= Installation
+
+This plugin requires 'pusher' gem. You can install it using "gem install pusher"
+Works just like an ordinary redmine plugin. Copy the files to vendor/plugins. Fill up the pusherapp.com credentials in init.rb
+

@@ -1,0 +1,26 @@
+  <%= javascript_include_tag "growl", :plugin => 'redmine_instant_alerts'  %>
+  <script src="http://js.pusherapp.com/1.9/pusher.min.js" type="text/javascript"></script>
+  <script type="text/javascript">
+    // Enable pusher logging - don't include this in production
+    //Pusher.log = function(message) {
+    //  if (window.console && window.console.log) window.console.log(message);
+    //};
+
+    // Flash fallback logging - don't include this in production
+    //WEB_SOCKET_DEBUG = true;
+
+    var pusher = new Pusher(<%=PUSHER_KEY%>);
+    <% User.current.projects.each_with_index do |project,i| %> 
+        var channel_<%=i%> = pusher.subscribe('project-<%=project.id%>');
+        channel_<%=i%>.bind('issue_add', function(data) {
+        Growl.Smoke({
+			title: data.issue_status + " - " + data.issue_name + " ("+data.project+")",
+			text: data.description,
+			duration: 10.0
+			});
+        });
+    <% end %>
+
+  </script>
+
+
