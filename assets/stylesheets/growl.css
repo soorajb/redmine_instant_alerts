@@ -1,0 +1,28 @@
+div.atwork {
+	color: 					#FFF;
+	width: 					253px;
+	margin-top: 			5px;
+	margin-bottom: 			5px;
+	text-align: 			left;
+	display: 				none;
+	min-height: 			40px;
+	background: 			#4d4d4d url(../images/atwork.png) repeat-y 0;
+	border: 				1px solid #222;
+}
+
+div.atwork div.Growler-notice-head {
+	font-weight: 			bold;
+	font-size:				12px;
+	padding: 				5px 20px;
+	color: 					#efca23;
+	
+}
+
+div.atwork div.Growler-notice-exit {
+	float: 					right;
+	cursor:					pointer;
+	margin: 				3px;
+}
+div.atwork div.Growler-notice-body {
+	padding: 2px 0 10px 25px;
+}

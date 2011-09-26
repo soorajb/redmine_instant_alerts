@@ -1,196 +1,167 @@
-/*  Window.Growl, version 2.0: http://icebeat.bitacoras.com
- *  Daniel Mota aka IceBeat <daniel.mota@gmail.com>
- *  
- *  Mod for usage with Prototype/Script.aculo.us by silvanji <silvan@liip.ch>
---------------------------------------------------------------------------*/
-var Gr0wl = {};
+/**
+ * Growler 1.0.0
+ *
+ * Dual licensed under the MIT (http://www.opensource.org/licenses/mit-license.php)
+ * and GPL (http://www.opensource.org/licenses/gpl-license.php) licenses.
+ *
+ * Written by Kevin Armstrong <kevin@kevinandre.com>
+ * Last updated: 2008.10.14
+ *
+ * Growler is a PrototypeJS based class that displays unobtrusive notices on a page. 
+ * It functions much like the Growl (http://growl.info) available on the Mac OS X. 
+ *
+ * Changes in 1.0.1:
+ * - 
+ *
+ * @todo
+ */
+Growler = (function(){
 
-Gr0wl.Base = Class.create({
-	
-    queue:[],
-    
-	options: {
-		image: '/images/var-logo-60.png',
-		title: 'Growl.Smoke<br/>Script.aculo.us mod',
-		text: 'http://blog.var.cc/static/growl/',
-		duration: 1.5
-	},
-	
-	initialize: function(image) {
-	    this.image = new Element('img',{src:image});
-		this.create();
-    },
-	
-	create: function(styles) {
-	    this.image.setStyle('position:absolute;display:none');
-		Element.setOpacity(this.image, 0.0);
-		this.block = new Element('div');
-        this.block.setStyle('position:absolute;display:none;z-index:999;color:#fff;font: 12px/14px "Lucida Grande", Arial, Helvetica, Verdana, sans-serif;'+styles.div);
-		this.block.setOpacity(0.0);
-		this.block.insert(new Element('img').setStyle(styles.img));
-		this.block.insert(new Element('h3').setStyle(styles.h3));
-		this.block.insert(new Element('p').setStyle(styles.p));
-	},
-	
-    show: function(options) {
-	    
-        options = Object.extend(this.options, options);
-	    var elements = [this.image.cloneNode(true), this.block.cloneNode(true)];
-        
-        elements.each(function(e, i) {
-            document.body.appendChild(e);
-            e.setStyle(options.position);
-            if(i) {
-                var img = e.down(0);
-                img.setAttribute('src', options.image);
-                img.next().update(options.title).next().update(options.text);
-            }
-        });
-		
-        var fxOpts = {duration:0.8, from:0.0, sync:true};
-        new Effect.Event({
-            beforeStart: function() {
-                new Effect.Parallel([
-                    new Effect.Opacity(elements[0], Object.extend(fxOpts, {to:0.6})),
-                    new Effect.Opacity(elements[1], Object.extend(fxOpts, {to:0.9}))
-                ], {duration:0.8, queue:options.queue}
-                
-                );
-            },
-            
-            duration: options.duration,
-            queue: options.queue
-        });
-        
-        this.hide(elements);
-        
-    },
-	
-	hide: function(elements) {
-        var fxOpts = {
-            duration:0.8, 
-            to:0.0,
-            afterFinish: function(o) {
-                o.element.remove();
-            },
-            sync:true
-        };
-        
-        new Effect.Parallel([
-            new Effect.Opacity(elements[0], Object.extend(fxOpts, {from:0.6})),
-            new Effect.Opacity(elements[1], Object.extend(fxOpts, {from:0.9}))
-        ], {
-            duration:0.8, 
-            queue:'end', 
-            afterFinish:(function() {
-                this.queue.shift();
-            }).bind(this)
-           }
-        );
-    },
-	
-	getScrollTop: function() {
-        var scrollTop = document.body.scrollTop;
-        if (scrollTop == 0) {
-            if (window.pageYOffset) {
-                scrollTop = window.pageYOffset;
-            } else {
-                scrollTop = (document.body.parentElement) ? document.body.parentElement.scrollTop : 0;
-            }
-        }
-        return scrollTop;
-	},
-    
-    getScrollLeft: function() {
-        var scrollLeft = document.body.scrollLeft;
-        if (scrollLeft == 0) {
-            if (window.pageXOffset) {
-                scrollLeft = window.pageXOffset;
-            } else {
-                scrollLeft = (document.body.parentElement) ? document.body.parentElement.scrollLeft : 0;
-            }
-        }
-        return scrollLeft;
-    }
-	
-});
-
-
-Gr0wl.Smoke = Class.create(Gr0wl.Base, {
-	
-	
-	
-	create: function($super, oArgs) {
-		$super({
-			div: 'width:298px;height:73px;',
-			img: 'float:left;margin:12px;',
-			h3: 'margin:0;padding:10px 0px;font-size:13px;',
-			p: 'margin:0px 10px;font-size:12px;'
+	var noticeOptions = {
+		header: 			'&nbsp;'
+		,speedin: 			0.3
+		,speedout: 			0.5
+		,outDirection: 		{ y: -20 }
+		,life: 				5
+		,sticky: 			false
+		,className: 		""
+	};
+	var growlerOptions = {
+		location: 			"tr"
+		,width: 			"250px"
+	};
+	var IE = (Prototype.Browser.IE) ? parseFloat(navigator.appVersion.split("MSIE ")[1]) || 0 : 0;
+	function removeNotice(n, o){
+		o = o || noticeOptions;
+		new Effect.Parallel([
+			new Effect.Move(n, Object.extend({ sync: true, mode: 'relative' }, o.outDirection)),
+			new Effect.Opacity(n, { sync: true, to: 0 }) 
+		], {
+			duration: o.speedout
+			,afterFinish: function(){
+				try {
+					var ne = n.down("div.notice-exit");
+					if(ne != undefined){
+						ne.stopObserving("click", removeNotice);
+					}
+					if(o.created && Object.isFunction(o.created)){
+						n.stopObserving("notice:created", o.created);
+					}
+					if(o.destroyed && Object.isFunction(o.destroyed)){
+						n.fire("notice:destroyed");
+						n.stopObserving("notice:destroyed", o.destroyed);
+					}
+				} catch(e){}
+				try {
+					n.remove();
+				} catch(e){}
+			}
 		});
-	},
-	
-	show: function($super, options) {
-		var last = this.queue.last();
-		if (!last) {
-		  last = 0;
+	}
+	function createNotice(growler, msg, options){
+		var opt = Object.clone(noticeOptions);
+		options = options || {};
+		Object.extend(opt, options);
+		var notice;
+		if (opt.className != ""){
+			notice = new Element("div", {"class": opt.className}).setStyle({display: "block", opacity: 0});
+		} else {
+			notice = new Element("div", {"class": "Growler-notice"}).setStyle({display: "block", opacity: 0});
 		}
-		scrollTop = this.getScrollTop();
-		delta = scrollTop+10+(last*83);
-		options = Object.extend(options, {
-            position: {'top':delta+'px', 'right':'10px', 'display':'block'},
-            queue: 'parallel'
-        }); 
-        
-        this.queue.push(last+1);
-		$super(options);
-	},
-	
-	hide: function($super, elements) {
-		$super(elements,{'opacity': 0 });
+		if(opt.created && Object.isFunction(opt.created)){
+			notice.observe("notice:created", opt.created);
+		}
+		if(opt.destroyed && Object.isFunction(opt.destroyed)){
+			notice.observe("notice:destroyed", opt.destroyed);
+		}
+		if (opt.sticky){
+			var noticeExit = new Element("div", {"class": "Growler-notice-exit"}).update("&times;");
+			noticeExit.observe("click", function(){ removeNotice(notice, opt); });
+			notice.insert(noticeExit);
+		}
+		notice.insert(new Element("div", {"class": "Growler-notice-head"}).update(opt.header));
+		notice.insert(new Element("div", {"class": "Growler-notice-body"}).update(msg));
+		growler.insert(notice);
+		new Effect.Opacity(notice, { to: 0.85, duration: opt.speedin });
+		if (!opt.sticky){
+			removeNotice.delay(opt.life, notice, opt);
+		}
+		notice.fire("notice:created");
+		return notice;
 	}
-	
-});
-
-Gr0wl.Bezel = Class.create(Gr0wl.Base, {
-	
-    
-	create: function($super) {
-		this.i=0;
-		$super({
-			div: 'width:211px;height:206px;text-align:center;',
-			img: 'margin-top:25px;',
-			h3: 'margin:0;padding:0px;padding-top:22px;font-size:14px;',
-			p: 'margin:15px;font-size:12px;'
-		});
-	},
-	
-	show: function($super, options) {
-		var top = this.getScrollTop()+(document.body.offsetHeight /2)-105,
-		left = this.getScrollLeft()+(document.body.offsetWidth / 2)-103;
-        options = Object.extend(options, {
-            position: {'top':top+'px', 'left':left+'px', 'display':'block'},
-            queue: 'end'
-        });
-        $super(options);
-    },
-	
-	hide: function($super, elements) {
-		$super(elements, { 'opacity': 0, 'margin-top': [0,50] });
+	function specialNotice(g, m, o, t, b, c){
+		o.header = o.header || t;
+		var n = createNotice(g, m, o);
+		n.setStyle({ backgroundColor: b, color: c });
+		return n;
 	}
-	
-});
+	return Class.create({
+		initialize: function(options){
+			var opt = Object.clone(growlerOptions);
+			options = options || {};
+			Object.extend(opt, options);
+			this.growler = new Element("div", { "class": "Growler", "id": "Growler" });
+			this.growler.setStyle({ position: ((IE==6)?"absolute":"fixed"), padding: "10px", "width": opt.width, "z-index": "50000" });
+			if(IE==6){
+				var offset = { w: parseInt(this.growler.style.width)+parseInt(this.growler.style.padding)*3, h: parseInt(this.growler.style.height)+parseInt(this.growler.style.padding)*3 };
+				switch(opt.location){
+					case "br":
+						this.growler.style.setExpression("left", "( 0 - Growler.offsetWidth + ( document.documentElement.clientWidth ? document.documentElement.clientWidth : document.body.clientWidth ) + ( ignoreMe2 = document.documentElement.scrollLeft ? document.documentElement.scrollLeft : document.body.scrollLeft ) ) + 'px'");
+					  	this.growler.style.setExpression("top", "( 0 - Growler.offsetHeight + ( document.documentElement.clientHeight ? document.documentElement.clientHeight : document.body.clientHeight ) + ( ignoreMe = document.documentElement.scrollTop ? document.documentElement.scrollTop : document.body.scrollTop ) ) + 'px'");
+						break;
+					case "tl":
+						this.growler.style.setExpression("left", "( 0 + ( ignoreMe2 = document.documentElement.scrollLeft ? document.documentElement.scrollLeft : document.body.scrollLeft ) ) + 'px'");
+					  	this.growler.style.setExpression("top", "( 0 + ( ignoreMe = document.documentElement.scrollTop ? document.documentElement.scrollTop : document.body.scrollTop ) ) + 'px'");
+						break;
+					case "bl":
+						this.growler.style.setExpression("left", "( 0 + ( ignoreMe2 = document.documentElement.scrollLeft ? document.documentElement.scrollLeft : document.body.scrollLeft ) ) + 'px'");
+					  	this.growler.style.setExpression("top", "( 0 - Growler.offsetHeight + ( document.documentElement.clientHeight ? document.documentElement.clientHeight : document.body.clientHeight ) + ( ignoreMe = document.documentElement.scrollTop ? document.documentElement.scrollTop : document.body.scrollTop ) ) + 'px'");
+						break;
+					default:
+						this.growler.setStyle({right: "auto", bottom: "auto"});
+						this.growler.style.setExpression("left", "( 0 - Growler.offsetWidth + ( document.documentElement.clientWidth ? document.documentElement.clientWidth : document.body.clientWidth ) + ( ignoreMe2 = document.documentElement.scrollLeft ? document.documentElement.scrollLeft : document.body.scrollLeft ) ) + 'px'");
+					  	this.growler.style.setExpression("top", "( 0 + ( ignoreMe = document.documentElement.scrollTop ? document.documentElement.scrollTop : document.body.scrollTop ) ) + 'px'");
+						break;
+				}
+			} else {
+				switch(opt.location){
+					case "br":
+						this.growler.setStyle({bottom: 0, right: 0});
+						break;
+					case "tl":
+						this.growler.setStyle({top: 0, left: 0});
+						break;
+					case "bl":
+						this.growler.setStyle({top: 0, right: 0});
+						break;
+					case "tc":
+						this.growler.setStyle({top: 0, left: "25%", width: "50%"});
+						break;
+					case "bc":
+						this.growler.setStyle({bottom: 0, left: "25%", width: "50%"});
+						break;
+					default:
+						this.growler.setStyle({top: 0, right: 0});
+						break;
+				}
+			}
+			this.growler.wrap( document.body );		
+		}
+		,growl: function(msg, options) {
+			return createNotice(this.growler, msg, options);
+		}
+		,warn: function(msg, options){
+			return specialNotice(this.growler, msg, options, "Warning!", "#F6BD6F", "#000");
+		}
+		,error: function(msg, options){
+			return specialNotice(this.growler, msg, options, "Critical!", "#F66F82", "#000");
+		}
+		,info: function(msg, options){
+			return specialNotice(this.growler, msg, options, "Information!", "#BBF66F", "#000");
+		}
+		,ungrowl: function(n, o){
+			removeNotice(n, o);
+		}
+	});
 
-var Growl =  {
-    initialize: function() {
-        this.oBezel = new Gr0wl.Bezel('/images/bezel.png');
-        this.Bezel =  this.oBezel.show.bind(this.oBezel);
-        this.oSmoke = new Gr0wl.Smoke('/images/smoke.png');
-        this.Smoke = this.oSmoke.show.bind(this.oSmoke);
-    }
-};
-
-
-
-Event.observe(window, 'load', function() {
-    Growl.initialize();
- });
+})();

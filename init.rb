@@ -10,7 +10,3 @@ Redmine::Plugin.register :redmine_instant_alerts do
   url 'http://github.com.com/soorajb/redmine_instant_alerts'
   author_url 'http://github.com/soorajb'
 end
-
-PUSHER_APP_ID = ""
-PUSHER_KEY = ""
-PUSHER_SECRET = ""
